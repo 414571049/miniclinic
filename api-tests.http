@@ -1,0 +1,35 @@
+### 取得總掛號數
+GET http://localhost:8080/api/appointments/count
+
+### 取得所有掛號 (無參數)
+GET http://localhost:8080/api/appointments
+
+### 依日期查詢掛號
+GET http://localhost:8080/api/appointments?date=1985-03-15
+
+### 統計頁面 (HTML)
+GET http://localhost:8080/stats
+
+### 取得總掛號數 API
+GET http://localhost:8080/api/appointments/count
+
+### 查詢所有掛號記錄 (無參數)
+GET http://localhost:8080/api/appointments
+
+### 依日期篩選掛號 (?date=YYYY-MM-DD)
+GET http://localhost:8080/api/appointments?date=2026-05-01
+
+### 依醫師 ID 篩選掛號 (?doctorId=D001)
+GET http://localhost:8080/api/appointments?doctorId=D001
+
+### 同時依日期與醫師篩選
+GET http://localhost:8080/api/appointments?date=2026-05-01&doctorId=D001
+
+### 依醫師 ID 查詢掛號
+GET http://localhost:8080/api/appointments?doctorId=D001
+
+### 取消掛號 (測試 ID 為 1 的掛號)
+PUT http://localhost:8080/api/appointments/1/status
+Content-Type: application/json
+
+{ "status": "CANCELLED" }
