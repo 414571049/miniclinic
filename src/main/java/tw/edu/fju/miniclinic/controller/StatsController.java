@@ -1,59 +1,48 @@
 package tw.edu.fju.miniclinic.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import tw.edu.fju.miniclinic.model.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import tw.edu.fju.miniclinic.model.AppointmentRepository;
+import tw.edu.fju.miniclinic.model.DoctorRepository;
+import tw.edu.fju.miniclinic.model.PatientRepository;
 
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class StatsController {
 
-    @Autowired private DoctorRepository doctorRepo;
-    @Autowired private PatientRepository patientRepo;
-    @Autowired private AppointmentRepository appointmentRepo;
+    private final DoctorRepository doctorRepo;
+    private final PatientRepository patientRepo;
+    private final AppointmentRepository appointmentRepo;
+
+    public StatsController(DoctorRepository doctorRepo, 
+                           PatientRepository patientRepo, 
+                           AppointmentRepository appointmentRepo) {
+        this.doctorRepo = doctorRepo;
+        this.patientRepo = patientRepo;
+        this.appointmentRepo = appointmentRepo;
+    }
 
     @GetMapping("/stats")
     public String showStats(Model model) {
+        // 基本總數統計
         model.addAttribute("doctorCount", doctorRepo.count());
         model.addAttribute("patientCount", patientRepo.count());
-        model.addAttribute("apptCount", appointmentRepo.count());
-        model.addAttribute("deptStats", appointmentRepo.countAppointmentsByDepartment());
+        model.addAttribute("appointmentCount", appointmentRepo.count());
+
+        // 效能警示：在大數據量下，應避免在 Controller 使用 .findAll().stream()
+        // 建議做法：在 AppointmentRepository 寫一個 @Query(GROUP BY)
+        // 目前這樣寫在小專案沒問題，但實務上建議由資料庫端進行統計
+        Map<String, Long> deptStats = appointmentRepo.findAll().stream()
+                .filter(appt -> appt.getDoctor() != null && appt.getDoctor().getDepartment() != null)
+                .collect(Collectors.groupingBy(
+                        appt -> appt.getDoctor().getDepartment(),
+                        Collectors.counting()
+                ));
+        model.addAttribute("deptStats", deptStats);
+
         return "stats";
-    }
-
-    @GetMapping("/api/appointments/count")
-    @ResponseBody
-    public Map<String, Long> getApptCount() {
-        Map<String, Long> result = new HashMap<>();
-        result.put("count", appointmentRepo.count());
-        return result;
-    }
-
-    @GetMapping("/api/appointments")
-    @ResponseBody
-    public List<Appointment> getAppointments(
-            @RequestParam(required = false) String date,
-            @RequestParam(required = false) String doctorId) {
-        
-        LocalDate localDate = (date != null && !date.isEmpty()) ? LocalDate.parse(date) : null;
-        Doctor doctor = (doctorId != null && !doctorId.isEmpty()) ? 
-                        doctorRepo.findById(doctorId).orElse(null) : null;
-
-        // 處理三種情況：都有傳、只傳日期、只傳醫師、都沒傳
-        if (localDate != null && doctor != null) {
-            return appointmentRepo.findByDoctorAndApptDate(doctor, localDate);
-        } else if (localDate != null) {
-            return appointmentRepo.findByApptDate(localDate);
-        } else if (doctor != null) {
-            return appointmentRepo.findByDoctor(doctor);
-        } else {
-            return appointmentRepo.findAll();
-        }
     }
 }
